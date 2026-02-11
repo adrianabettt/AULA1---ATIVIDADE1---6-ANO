@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafio 10 Dados - EF06CO01</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f4f8; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 95%; max-width: 600px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        #score-board { font-weight: bold; color: #2c3e50; }
+        #dado-display { font-size: 2.5rem; font-weight: bold; margin: 40px 0; color: #1a73e8; min-height: 100px; display: flex; align-items: center; justify-content: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.05); }
+        .options-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .btn-opt { background-color: #ffffff; border: 2px solid #1a73e8; color: #1a73e8; padding: 15px 5px; font-size: 1rem; font-weight: bold; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .btn-opt:hover { background-color: #1a73e8; color: white; }
+        #feedback { margin-top: 20px; padding: 15px; border-radius: 10px; min-height: 50px; display: none; line-height: 1.4; }
+        .correct { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .wrong { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .btn-next { background-color: #2c3e50; color: white; border: none; padding: 15px 30px; margin-top: 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; display: none; }
+        .progress-bar { height: 8px; background: #eee; border-radius: 4px; margin-bottom: 20px; overflow: hidden; }
+        #progress { height: 100%; background: #34a853; width: 0%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <span id="score-board">Acertos: 0</span>
+        <span id="contador">Questão: 1/10</span>
+    </div>
+    <div class="progress-bar"><div id="progress"></div></div>
+    
+    <div id="dado-display">---</div>
+
+    <div class="options-container">
+        <button class="btn-opt" onclick="checkAnswer('INTEIRO')">INTEIRO</button>
+        <button class="btn-opt" onclick="checkAnswer('REAL')">REAL</button>
+        <button class="btn-opt" onclick="checkAnswer('STRING')">STRING</button>
+    </div>
+
+    <div id="feedback"></div>
+    <center><button id="btn-next" class="btn-next" onclick="nextQuestion()">Próximo Dado ➔</button></center>
+</div>
+
+<script>
+    const bancoCompleto = [
+        { d: "Número 5", t: "INTEIRO", e: "Números sem vírgula são Inteiros." },
+        { d: "Altura 1.75", t: "REAL", e: "Alturas usam casas decimais, logo são do tipo Real." },
+        { d: "Nome 'Carlos'", t: "STRING", e: "Textos e nomes são sempre Strings." },
+        { d: "R$ 10,50", t: "REAL", e: "Valores monetários com centavos são Reais." },
+        { d: "Idade 11", t: "INTEIRO", e: "A idade contada em anos inteiros é do tipo Inteiro." },
+        { d: "Cor 'Verde'", t: "STRING", e: "Cores são palavras (texto), portanto String." },
+        { d: "CEP 89990-000", t: "STRING", e: "O hífen torna o CEP um texto (String)." },
+        { d: "Placa ABC-1234", t: "STRING", e: "Mistura de letras e símbolos é sempre String." },
+        { d: "Nota 8.0", t: "REAL", e: "Mesmo sendo .0, a presença do decimal indica tipo Real." },
+        { d: "Quantidade: 20", t: "INTEIRO", e: "Contagem de itens inteiros é tipo Inteiro." },
+        { d: "Telefone 3344-0099", t: "STRING", e: "Números com traços são formatados como String." },
+        { d: "Peso 0.800kg", t: "REAL", e: "Frações de quilo são números Reais." },
+        { d: "Rua das Araucárias", t: "STRING", e: "Endereços são cadeias de caracteres (String)." },
+        { d: "Temperatura -10", t: "INTEIRO", e: "Números negativos sem vírgula são Inteiros." },
+        { d: "PI (3.14)", t: "REAL", e: "O número PI é o exemplo clássico de Real." },
+        { d: "Senha 'Abc123'", t: "STRING", e: "Senhas são tratadas como texto para o sistema." },
+        { d: "Número 0", t: "INTEIRO", e: "O zero é considerado um valor Inteiro." },
+        { d: "E-mail 'aluno@ebmsl.com'", t: "STRING", e: "E-mails contêm símbolos, sendo Strings." },
+        { d: "Preço 0.99", t: "REAL", e: "Valores menores que 1 com decimais são Reais." },
+        { d: "Data 25/12", t: "STRING", e: "As barras fazem com que a data seja uma String." },
+        { d: "100 Metros", t: "INTEIRO", e: "Se for apenas o número da distância, é Inteiro." },
+        { d: "Letra 'Z'", t: "STRING", e: "Uma única letra ainda é uma String (caractere)." },
+        { d: "Nota 10,0", t: "REAL", e: "Números com vírgula decimal são Reais." },
+        { d: "CPF 123.456...", t: "STRING", e: "Pontos e traços transformam números em String." },
+        { d: "Saldo R$ -5.20", t: "REAL", e: "Saldos bancários com centavos são Reais." },
+        { d: "Emoji 😎", t: "STRING", e: "Símbolos e emojis também entram como String." },
+        { d: "Quantidade 1/2", t: "STRING", e: "A barra de fração faz o computador ler como texto." },
+        { d: "Número 1.000.000", t: "INTEIRO", e: "Mesmo grande, se não tem decimal, é Inteiro." },
+        { d: "Distância 5.5km", t: "REAL", e: "Kilômetros com fração são Reais." },
+        { d: "Versão 'v1.0'", t: "STRING", e: "A letra 'v' no início define como String." }
+    ];
+
+    let pool = [];
+    let currentIdx = 0;
+    let acertos = 0;
+
+    function iniciarJogo() {
+        // Embaralha o banco e pega só 10
+        pool = bancoCompleto.sort(() => 0.5 - Math.random()).slice(0, 10);
+        currentIdx = 0;
+        acertos = 0;
+        atualizarPlacar();
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        const questao = pool[currentIdx];
+        document.getElementById('dado-display').innerText = questao.d;
+        document.getElementById('feedback').style.display = "none";
+        document.getElementById('btn-next').style.display = "none";
+        document.getElementById('contador').innerText = `Questão: ${currentIdx + 1}/10`;
+        document.getElementById('progress').style.width = ((currentIdx + 1) / 10 * 100) + "%";
+        
+        const buttons = document.querySelectorAll('.btn-opt');
+        buttons.forEach(b => { b.disabled = false; b.style.opacity = "1"; });
+    }
+
+    function checkAnswer(choice) {
+        const questao = pool[currentIdx];
+        const feedbackDiv = document.getElementById('feedback');
+        feedbackDiv.style.display = "block";
+        
+        if (choice === questao.t) {
+            feedbackDiv.className = "correct";
+            feedbackDiv.innerHTML = "<strong>✅ ACERTOU!</strong><br>" + questao.e;
+            acertos++;
+        } else {
+            feedbackDiv.className = "wrong";
+            feedbackDiv.innerHTML = `<strong>❌ ERROU!</strong><br>O correto era ${questao.t}. ${questao.e}`;
+        }
+
+        atualizarPlacar();
+        document.querySelectorAll('.btn-opt').forEach(b => b.disabled = true);
+        document.getElementById('btn-next').style.display = "inline-block";
+        
+        if(currentIdx === 9) document.getElementById('btn-next').innerText = "Ver Resultado Final";
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < 10) {
+            loadQuestion();
+        } else {
+            finalizar();
+        }
+    }
+
+    function atualizarPlacar() {
+        document.getElementById('score-board').innerText = `Acertos: ${acertos}`;
+    }
+
+    function finalizar() {
+        let msg = acertos >= 7 ? "Excelente! Você domina os dados!" : "Bom esforço! Que tal revisar os tipos reais e strings?";
+        document.querySelector('.card').innerHTML = `
+            <h1>🎮 Fim de Jogo!</h1>
+            <p style="font-size: 1.5rem">Você acertou <strong>${acertos}</strong> de 10!</p>
+            <p>${msg}</p>
+            <button class="btn-next" style="display:inline-block" onclick="location.reload()">Jogar Novamente</button>
+        `;
+    }
+
+    iniciarJogo();
+</script>
+
+</body>
+</html>
